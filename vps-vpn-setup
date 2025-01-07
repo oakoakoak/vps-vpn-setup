@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# 检查是否为root用户
+if [ "$(id -u)" -ne 0 ]; then
+    echo "请使用 root 用户运行此脚本！"
+    exit 1
+fi
+
+echo "开始 VPS 一键搭建 VPN 环境..."
+
+# 第一步：安装 3x-ui
+echo "安装 3x-ui..."
+bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh) <<EOF
+y
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "3x-ui 安装失败，请检查网络或脚本问题！"
+    exit 1
+fi
+
+# 设置 3x-ui 的端口为 1000
+echo "设置 3x-ui 的端口为 1000..."
+/usr/local/x-ui/x-ui setting -port 1000
+
+if [ $? -ne 0 ]; then
+    echo "设置 3x-ui 端口失败！请手动调整。"
+    exit 1
+fi
+
+# 修改默认账号、密码和面板路径
+echo "修改 3x-ui 默认账号、密码和面板路径..."
+/usr/local/x-ui/x-ui setting -username oakoak -password mima.123 -path /oak/
+
+if [ $? -ne 0 ]; then
+    echo "修改默认账号、密码或路径失败！请手动调整。"
+    exit 1
+fi
+
+# 第二步：安装并启用 BBR+FQ
+echo "启用 BBR+FQ 网络加速..."
+wget -N --no-check-certificate "https://github.000060000.xyz/tcpx.sh" -O tcpx.sh
+chmod +x tcpx.sh
+./tcpx.sh <<EOF
+11
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "BBR+FQ 加速安装失败！请检查网络或脚本问题。"
+    exit 1
+fi
+
+echo "BBR+FQ 加速已成功启用！"
+
+# 输出面板访问信息
+echo
+echo "====================================="
+echo "VPN 环境搭建完成！"
+echo "3x-ui 面板访问地址：http://$(curl -s ifconfig.me):1000/oak/"
+echo "登录用户名：oakoak"
+echo "登录密码：mima.123"
+echo "====================================="
+echo
+
+# 是否重启系统
+read -p "是否立即重启系统以完成 BBR 加速？ (y/N): " reboot_choice
+reboot_choice=${reboot_choice:-n}
+
+if [[ $reboot_choice == "y" || $reboot_choice == "Y" ]]; then
+    echo "系统将在 5 秒后重启..."
+    sleep 5
+    reboot
+else
+    echo "请手动重启系统以完成 BBR 加速！"
+    echo "脚本执行完成！"
+fi
